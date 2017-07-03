@@ -1,0 +1,29 @@
+body, h1, h2, h3, h4, h5, h6, p, blockquote, pre, hr, dl, dd, ol, ul, figure {
+    margin: 30px;
+}
+
+body {
+    color: #000;
+    background-color: #FFF;
+    font-family: Verdana, Geneva, sans-serif;
+}
+
+.drop-region {
+    width: 90%;
+    height: 90%;
+    position: absolute;
+    top:0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: auto;
+
+    background: #DED5C3;
+    color: #000;
+    outline: 5px dashed #666;
+    text-align: center;
+}
+
+.drop-region.dragover {
+    background: #FAFBC1;
+}

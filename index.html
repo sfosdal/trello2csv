@@ -1,0 +1,162 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+    <title>&laquo;t2c&raquo;</title>
+    <link href="favicon.ico" rel="shortcut icon">
+    <link href="css/main.css" type="text/css" rel="stylesheet">
+    <script src="js/papaparse.min.js" type="application/javascript"></script>
+</head>
+<body>
+
+<div class="drop-region">
+    <div class="message">
+        <h1>&laquo; trello2csv &raquo;</h1>
+        <p>drag files here or click to upload</p>
+        <p>converted file will be downloaded</p>
+    </div>
+</div>
+<script type="text/javascript">
+    (function (window) {
+        function triggerCallback(e, callback) {
+            if (!callback || typeof callback !== 'function') {
+                return;
+            }
+            var files;
+            if (e.dataTransfer) {
+                files = e.dataTransfer.files;
+            } else if (e.target) {
+                files = e.target.files;
+            }
+            callback.call(null, files);
+        }
+
+        function makeDroppable(ele, callback) {
+            var input = document.createElement('input');
+            input.setAttribute('type', 'file');
+            input.setAttribute('multiple', true);
+            input.style.display = 'none';
+            input.addEventListener('change', function (e) {
+                triggerCallback(e, callback);
+            });
+            ele.appendChild(input);
+
+            ele.addEventListener('dragover', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                ele.classList.add('dragover');
+            });
+
+            ele.addEventListener('dragleave', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                ele.classList.remove('dragover');
+            });
+
+            ele.addEventListener('drop', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                ele.classList.remove('dragover');
+                triggerCallback(e, callback);
+            });
+
+            ele.addEventListener('click', function () {
+                input.value = null;
+                input.click();
+            });
+        }
+
+        window.makeDroppable = makeDroppable;
+    })(this);
+    function toYesNo(v) {
+        if (v) {
+            return "YES";
+        } else {
+            return "NO";
+        }
+
+    }
+    (function (window) {
+        makeDroppable(window.document.querySelector('.drop-region'), function (files) {
+            console.log("files: " + files);
+            if (files.length > 1) {
+                alert('unable to process multiple files');
+            } else {
+                var file = files[0];
+                var readFile = new FileReader();
+                readFile.onload = function (e) {
+                    function convert(board) {
+
+                        function download(csv) {
+                            var hiddenElement = document.createElement('a');
+                            hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
+                            hiddenElement.target = '_blank';
+                            hiddenElement.download = file.name + '.csv';
+                            hiddenElement.click();
+                        }
+
+                        function convertToDate(str) {
+                            if (str === null) {
+                                return "";
+                            } else {
+                                return new Date(str).toLocaleDateString();
+                            }
+                        }
+
+                        // map of list names
+                        var listName = {};
+                        for (var i = 0; i < board.lists.length; i++) {
+                            listName[board.lists[i].id] = board.lists[i].name
+                        }
+
+                        // map of member names
+                        var memberFullName = {};
+                        for (var j = 0; j < board.members.length; j++) {
+                            memberFullName[board.members[j].id] = board.members[j].fullName
+                        }
+                        function convertMember(id) {
+                            return memberFullName[id];
+                        }
+
+                        // map of creation dates
+                        var creationDate = {};
+                        for (var i2 = 0; i2 < board.actions.length; i2++) {
+                            var action = board.actions[i2];
+                            if (action.type === "createCard" && 'card' in action.data) {
+                                creationDate[action.data.card.id] = action.date;
+                            }
+                        }
+
+                        var fields = ["Board", "List", "Name", "Description", "Members", "Created", "Due", "Last Activity", "Has Attachments", "Is Closed", "URL"];
+                        var data = [];
+                        for (var k = 0; k < board.cards.length; k++) {
+                            var card = board.cards[k];
+                            data.push([
+                                board.name,
+                                listName[card.idList],
+                                card.name,
+                                card.desc,
+                                card.idMembers.map(convertMember).join(", "),
+                                convertToDate(creationDate[card.id]),
+                                convertToDate(card.due),
+                                convertToDate(card.dateLastActivity),
+                                toYesNo(card.attachments.length),
+                                toYesNo(card.closed),
+                                card.shortUrl
+                            ]);
+                        }
+                        var csv = Papa.unparse({fields: fields, data: data});
+                        console.log(csv);
+                        download(csv);
+                    }
+
+                    var contents = e.target.result;
+                    var json = JSON.parse(contents);
+                    convert(json);
+                };
+                readFile.readAsText(file);
+            }
+        });
+    })(this);
+</script>
+</body>
+</html>
